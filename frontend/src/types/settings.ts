@@ -61,6 +61,10 @@ export type Settings = {
   EMAIL_VERIFIED?: boolean;
   GIT_USER_NAME?: string;
   GIT_USER_EMAIL?: string;
+  // Claude Code CLI (advanced)
+  ENABLE_CLAUDE_CODE_CLI?: boolean;
+  CLAUDE_CODE_PATH?: string;
+  CLAUDE_CODE_MAX_OUTPUT_TOKENS?: number | null;
 };
 
 export type ApiSettings = {
@@ -93,6 +97,10 @@ export type ApiSettings = {
   email_verified?: boolean;
   git_user_name?: string;
   git_user_email?: string;
+  // Claude Code CLI (advanced)
+  enable_claude_code_cli?: boolean | null;
+  claude_code_path?: string | null;
+  claude_code_max_output_tokens?: number | null;
 };
 
 export type PostSettings = Settings & {

@@ -31,6 +31,10 @@ export const DEFAULT_SETTINGS: Settings = {
   },
   GIT_USER_NAME: "openhands",
   GIT_USER_EMAIL: "openhands@all-hands.dev",
+  // Claude Code CLI (advanced)
+  ENABLE_CLAUDE_CODE_CLI: false,
+  CLAUDE_CODE_PATH: "",
+  CLAUDE_CODE_MAX_OUTPUT_TOKENS: null,
 };
 
 /**

@@ -34,6 +34,10 @@ const saveSettingsMutationFn = async (settings: Partial<PostSettings>) => {
       settings.GIT_USER_NAME?.trim() || DEFAULT_SETTINGS.GIT_USER_NAME,
     git_user_email:
       settings.GIT_USER_EMAIL?.trim() || DEFAULT_SETTINGS.GIT_USER_EMAIL,
+  // Claude Code CLI
+  enable_claude_code_cli: settings.ENABLE_CLAUDE_CODE_CLI,
+  claude_code_path: settings.CLAUDE_CODE_PATH?.trim() || undefined,
+  claude_code_max_output_tokens: settings.CLAUDE_CODE_MAX_OUTPUT_TOKENS ?? undefined,
   };
 
   await OpenHands.saveSettings(apiSettings);

@@ -37,6 +37,12 @@ const getSettingsQueryFn = async (): Promise<Settings> => {
     GIT_USER_NAME: apiSettings.git_user_name || DEFAULT_SETTINGS.GIT_USER_NAME,
     GIT_USER_EMAIL:
       apiSettings.git_user_email || DEFAULT_SETTINGS.GIT_USER_EMAIL,
+    // Claude Code CLI
+    ENABLE_CLAUDE_CODE_CLI:
+      apiSettings.enable_claude_code_cli ?? DEFAULT_SETTINGS.ENABLE_CLAUDE_CODE_CLI,
+    CLAUDE_CODE_PATH: apiSettings.claude_code_path || DEFAULT_SETTINGS.CLAUDE_CODE_PATH,
+    CLAUDE_CODE_MAX_OUTPUT_TOKENS:
+      apiSettings.claude_code_max_output_tokens ?? DEFAULT_SETTINGS.CLAUDE_CODE_MAX_OUTPUT_TOKENS,
     IS_NEW_USER: false,
   };
 };

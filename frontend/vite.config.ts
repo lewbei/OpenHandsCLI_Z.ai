@@ -1,6 +1,7 @@
 /// <reference types="vitest" />
 /// <reference types="vite-plugin-svgr/client" />
 import { defineConfig, loadEnv } from "vite";
+import path from "node:path";
 import viteTsconfigPaths from "vite-tsconfig-paths";
 import svgr from "vite-plugin-svgr";
 import { reactRouter } from "@react-router/dev/vite";
@@ -31,6 +32,13 @@ export default defineConfig(({ mode }) => {
       svgr(),
       tailwindcss(),
     ],
+    resolve: {
+      alias: [
+        // Ensure tsconfig path alias `#/*` -> `src/*` works in all build modes
+        // Using a regex so it matches prefixes like "#/utils/..." instead of only an exact "#" import
+        { find: /^#\//, replacement: `${path.resolve(process.cwd(), "src")}/` },
+      ],
+    },
     optimizeDeps: {
       include: [
         // Pre-bundle ALL dependencies to prevent runtime optimization and page reloads

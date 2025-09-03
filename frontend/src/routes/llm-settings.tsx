@@ -150,7 +150,13 @@ function LlmSettingsScreen() {
 
     const fullLlmModel = provider && model && `${provider}/${model}`;
 
-    saveSettings(
+  // Claude Code fields (present only in advanced UI, keep defaults here)
+    const enableClaudeCodeCli = settings?.ENABLE_CLAUDE_CODE_CLI ?? DEFAULT_SETTINGS.ENABLE_CLAUDE_CODE_CLI;
+    const claudeCodePath = settings?.CLAUDE_CODE_PATH ?? DEFAULT_SETTINGS.CLAUDE_CODE_PATH;
+    const claudeCodeMaxOutputTokens =
+      settings?.CLAUDE_CODE_MAX_OUTPUT_TOKENS ?? DEFAULT_SETTINGS.CLAUDE_CODE_MAX_OUTPUT_TOKENS;
+
+  saveSettings(
       {
         LLM_MODEL: fullLlmModel,
         llm_api_key: apiKey || null,
@@ -165,6 +171,10 @@ function LlmSettingsScreen() {
         LLM_BASE_URL: DEFAULT_SETTINGS.LLM_BASE_URL,
         AGENT: DEFAULT_SETTINGS.AGENT,
         ENABLE_DEFAULT_CONDENSER: DEFAULT_SETTINGS.ENABLE_DEFAULT_CONDENSER,
+    // keep Claude Code settings as-is from current settings
+    ENABLE_CLAUDE_CODE_CLI: enableClaudeCodeCli,
+    CLAUDE_CODE_PATH: claudeCodePath,
+    CLAUDE_CODE_MAX_OUTPUT_TOKENS: claudeCodeMaxOutputTokens,
       },
       {
         onSuccess: handleSuccessfulMutation,
@@ -198,6 +208,16 @@ function LlmSettingsScreen() {
       .get("security-analyzer-input")
       ?.toString();
 
+    const enableClaude =
+      formData.get("enable-claude-code-cli-switch")?.toString() === "on";
+    const claudePath = formData.get("claude-code-path-input")?.toString();
+    const claudeMaxTokensStr = formData
+      .get("claude-code-max-output-tokens-input")
+      ?.toString();
+    const claudeMaxTokens = claudeMaxTokensStr
+      ? Number.parseInt(claudeMaxTokensStr, 10)
+      : null;
+
     saveSettings(
       {
         LLM_MODEL: model,
@@ -213,6 +233,9 @@ function LlmSettingsScreen() {
           securityAnalyzer === "none"
             ? null
             : securityAnalyzer || DEFAULT_SETTINGS.SECURITY_ANALYZER,
+        ENABLE_CLAUDE_CODE_CLI: enableClaude,
+        CLAUDE_CODE_PATH: claudePath || "",
+        CLAUDE_CODE_MAX_OUTPUT_TOKENS: claudeMaxTokens,
       },
       {
         onSuccess: handleSuccessfulMutation,
@@ -483,6 +506,39 @@ function LlmSettingsScreen() {
               data-testid="llm-settings-form-advanced"
               className="flex flex-col gap-6"
             >
+              {/* Claude Code CLI (advanced) */}
+              <SettingsSwitch
+                testId="enable-claude-code-cli-switch"
+                name="enable-claude-code-cli-switch"
+                defaultIsToggled={settings?.ENABLE_CLAUDE_CODE_CLI ?? DEFAULT_SETTINGS.ENABLE_CLAUDE_CODE_CLI}
+                onToggle={() => setDirtyInputs((prev) => ({ ...prev }))}
+              >
+                Use local Claude Code CLI
+              </SettingsSwitch>
+              {(settings?.ENABLE_CLAUDE_CODE_CLI ?? DEFAULT_SETTINGS.ENABLE_CLAUDE_CODE_CLI) && (
+                <>
+                  <SettingsInput
+                    testId="claude-code-path-input"
+                    name="claude-code-path-input"
+                    label="Claude CLI path (optional)"
+                    defaultValue={settings?.CLAUDE_CODE_PATH || ""}
+                    placeholder="claude"
+                    type="text"
+                    className="w-full max-w-[680px]"
+                    onChange={() => setDirtyInputs((p) => ({ ...p, baseUrl: p.baseUrl }))}
+                  />
+                  <SettingsInput
+                    testId="claude-code-max-output-tokens-input"
+                    name="claude-code-max-output-tokens-input"
+                    label="Claude max output tokens (optional)"
+                    defaultValue={(settings?.CLAUDE_CODE_MAX_OUTPUT_TOKENS ?? "").toString()}
+                    placeholder="leave blank to use model default"
+                    type="number"
+                    className="w-full max-w-[680px]"
+                    onChange={() => setDirtyInputs((p) => ({ ...p, baseUrl: p.baseUrl }))}
+                  />
+                </>
+              )}
               <SettingsInput
                 testId="llm-custom-model-input"
                 name="llm-custom-model-input"
