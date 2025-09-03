@@ -98,3 +98,44 @@ These methods are handled by separate functions in the config package.
 ## Conclusion
 
 The OpenHands configuration system provides a flexible and type-safe way to manage application settings. By following the naming conventions and utilizing the provided functions, developers can easily customize the behavior of OpenHands components through environment variables and other configuration sources.
+
+## Claude Code CLI (optional)
+
+OpenHands can route code-completion requests to a local Claude Code CLI instead of using the default API provider. This is useful if you have the Claude desktop app/CLI installed locally and want low-latency, private, or offline-ish development flows.
+
+Key fields on `LLMConfig`:
+- `enable_claude_code_cli` (bool, default: false): when true, OpenHands will use the local `claude` CLI.
+- `claude_code_path` (str | None): path to the `claude` executable. Defaults to `claude` on PATH if not set.
+- `claude_code_max_output_tokens` (int | None): optional override for max output tokens when using the CLI.
+
+Notes and limitations:
+- Image inputs aren’t supported by the CLI provider; image blocks are replaced with a short placeholder.
+- If the CLI isn’t available or fails, OpenHands will fall back to the API provider with a warning in logs.
+
+### Configure via TOML
+
+Add to your `config.toml` (or the `[llm]` section of any TOML you load):
+
+```toml
+[llm]
+enable_claude_code_cli = true
+# Windows example
+claude_code_path = "C:\\Program Files\\Claude\\claude.exe"
+# Optional override
+claude_code_max_output_tokens = 8192
+```
+
+You can also configure this per custom LLM section, e.g. `[llm.my_local_setup]`.
+
+### Configure via environment variables
+
+Use the `LLM_` prefix and uppercase field names:
+
+```bash
+LLM_ENABLE_CLAUDE_CODE_CLI=true
+# Windows path example (PowerShell):
+# $env:LLM_CLAUDE_CODE_PATH = "C:\\Program Files\\Claude\\claude.exe"
+LLM_CLAUDE_CODE_MAX_OUTPUT_TOKENS=8192
+```
+
+When the CLI route is enabled, any model string you set in `LLM_MODEL` is still accepted by OpenHands for metadata and logging, but completions will be handled by the local Claude Code CLI.

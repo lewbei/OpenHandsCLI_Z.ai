@@ -103,6 +103,22 @@ components or interface enhancements.
   make start-frontend
   ```
 
+On Windows:
+- Prefer running via WSL2 Ubuntu for the full developer flow (Docker socket, Makefile targets).
+- If running natively, ensure Python 3.12, Node.js 22+, and Docker Desktop are installed; some dev targets may require WSL for networking helpers.
+
+Claude Code CLI (optional):
+- If you have the Claude desktop app/CLI installed locally, you can route completions through it by setting in `config.toml`:
+
+```toml
+[llm]
+enable_claude_code_cli = true
+claude_code_path = "C:\\Program Files\\Claude\\claude.exe" # adjust path
+claude_code_max_output_tokens = 8192                             # optional
+```
+
+See `openhands/core/config/README.md` for environment variable alternatives and more details.
+
 ### 5. Running OpenHands with OpenHands
 
 You can use OpenHands to develop and improve OpenHands itself! This is a powerful way to leverage AI assistance for contributing to the project.
