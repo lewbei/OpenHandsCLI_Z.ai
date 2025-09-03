@@ -53,3 +53,18 @@ flowchart LR
 ## Runtime
 
 Please refer to the [documentation](https://docs.all-hands.dev/usage/architecture/runtime) to learn more about `Runtime`.
+
+## Claude Code CLI provider (optional)
+
+The LLM broker can route completions to a local Claude Code CLI. Toggle via config:
+
+```toml
+[llm]
+enable_claude_code_cli = true
+# Optional path override (Windows example):
+claude_code_path = "C:\\Program Files\\Claude\\claude.exe"
+# Optional token cap
+claude_code_max_output_tokens = 8192
+```
+
+Limitations: no image inputs via CLI. On failure, the system falls back to the API provider.

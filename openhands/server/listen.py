@@ -1,4 +1,5 @@
 import os
+import os.path
 
 import socketio
 
@@ -12,10 +13,16 @@ from openhands.server.middleware import (
 )
 from openhands.server.static import SPAStaticFiles
 
-if os.getenv('SERVE_FRONTEND', 'true').lower() == 'true':
+serve_frontend = os.getenv('SERVE_FRONTEND', 'true').lower() == 'true'
+frontend_build_dir = './frontend/build'
+if serve_frontend and os.path.isdir(frontend_build_dir):
     base_app.mount(
-        '/', SPAStaticFiles(directory='./frontend/build', html=True), name='dist'
+        '/', SPAStaticFiles(directory=frontend_build_dir, html=True), name='dist'
     )
+else:
+    # Skip mounting when frontend is not present or serving is disabled.
+    # This allows CLI-only setups to remove the frontend folder safely.
+    pass
 
 base_app.add_middleware(LocalhostCORSMiddleware)
 base_app.add_middleware(CacheControlMiddleware)

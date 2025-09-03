@@ -37,6 +37,12 @@ from openhands.llm.fn_call_converter import (
     convert_non_fncall_messages_to_fncall_messages,
 )
 from openhands.llm.retry_mixin import RetryMixin
+from openhands.llm.providers.claude_code import (
+    ClaudeCodeOptions,
+    run_claude_code,
+    to_litellm_like_response,
+    ClaudeCodeError,
+)
 
 __all__ = ['LLM']
 
@@ -254,6 +260,89 @@ class LLM(RetryMixin, DebugMixin):
                 messages = cast(list[dict[str, Any]], messages_list)
 
             kwargs['messages'] = messages
+
+            # Route to Claude Code CLI if enabled (allow any model string)
+            # This enables using Claude Code with non-Anthropic model IDs (e.g., glm-4.5) behind
+            # Anthropic-compatible gateways such as Z.ai.
+            if self.config.enable_claude_code_cli:
+                # If base_url/api_key are provided in config, expose them to the Claude CLI
+                # via standard Anthropic env vars. We set both AUTH_TOKEN and API_KEY for compatibility.
+                if self.config.base_url:
+                    os.environ.setdefault('ANTHROPIC_BASE_URL', self.config.base_url)
+                if self.config.api_key:
+                    _key = self.config.api_key.get_secret_value()
+                    if _key:
+                        os.environ.setdefault('ANTHROPIC_AUTH_TOKEN', _key)
+                        os.environ.setdefault('ANTHROPIC_API_KEY', _key)
+                # Build system prompt + messages for CLI
+                system_prompt = ''
+                user_messages: list[dict] = []
+                for m in messages:
+                    role = m.get('role')
+                    if role == 'system' and isinstance(m.get('content'), list):
+                        # concatenate text content blocks
+                        parts = []
+                        for b in m['content']:
+                            if isinstance(b, dict) and b.get('type') == 'text':
+                                t = b.get('text')
+                                if isinstance(t, str):
+                                    parts.append(t)
+                        system_prompt = '\n'.join(parts)
+                    else:
+                        # Filter out image blocks (Claude Code doesn't support images)
+                        if isinstance(m.get('content'), list):
+                            filtered_content: list[dict] = []
+                            for b in m['content']:
+                                if isinstance(b, dict) and b.get('type') == 'image_url':
+                                    url = (
+                                        (b.get('image_url') or {}).get('url')
+                                        if isinstance(b.get('image_url'), dict)
+                                        else None
+                                    )
+                                    filtered_content.append(
+                                        {
+                                            'type': 'text',
+                                            'text': f"[Image (url): {url or 'unknown'} not supported by Claude Code]",
+                                        }
+                                    )
+                                else:
+                                    filtered_content.append(b)
+                            m = {**m, 'content': filtered_content}
+                        user_messages.append(m)
+
+                options = ClaudeCodeOptions(
+                    system_prompt=system_prompt,
+                    messages=user_messages,
+                    path=self.config.claude_code_path or 'claude',
+                    model_id=self.config.model,
+                    max_output_tokens=self.config.claude_code_max_output_tokens
+                    or self.config.max_output_tokens,
+                )
+
+                try:
+                    events = []
+                    logger.debug('LLM: routing to Claude Code CLI provider')
+                    for ev in run_claude_code(options):
+                        events.append(ev)
+
+                    resp_dict = to_litellm_like_response(events)
+                    # Mimic LiteLLM ModelResponse minimal shape
+                    class DummyChoice:
+                        def __init__(self, message: dict) -> None:
+                            self.message = LiteLLMMessage(**message)
+
+                    class DummyResponse:
+                        def __init__(self, d: dict) -> None:
+                            self.choices = [
+                                DummyChoice(c['message']) for c in d['choices']
+                            ]
+                            self._hidden_params = {'additional_headers': {}}
+
+                    return DummyResponse(resp_dict)
+                except ClaudeCodeError as e:
+                    logger.warning(
+                        f"Claude Code CLI failed or unavailable; falling back to API. Reason: {e}"
+                    )
 
             # handle conversion of to non-function calling messages if needed
             original_fncall_messages = copy.deepcopy(messages)

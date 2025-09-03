@@ -15,6 +15,15 @@ def setup_llm_config(config: OpenHandsConfig, settings: Settings) -> OpenHandsCo
     llm_config.model = settings.llm_model or ''
     llm_config.api_key = settings.llm_api_key
     llm_config.base_url = settings.llm_base_url
+    # Optional Claude Code CLI wiring from user settings
+    if getattr(settings, 'enable_claude_code_cli', None) is not None:
+        llm_config.enable_claude_code_cli = bool(settings.enable_claude_code_cli)
+    if getattr(settings, 'claude_code_path', None) is not None:
+        llm_config.claude_code_path = settings.claude_code_path
+    if getattr(settings, 'claude_code_max_output_tokens', None) is not None:
+        llm_config.claude_code_max_output_tokens = (
+            settings.claude_code_max_output_tokens
+        )
     config.set_llm_config(llm_config)
     return config
 
