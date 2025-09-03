@@ -100,6 +100,30 @@ docker run -it --rm --pull=always \
 > On a public network? See our [Hardened Docker Installation Guide](https://docs.all-hands.dev/usage/runtimes/docker#hardened-docker-installation)
 > to secure your deployment by restricting network binding and implementing additional security measures.
 
+### Option 3: Windows Native CLI (no virtualenv)
+
+If you’re running this fork in CLI-only mode on Windows and don’t want a venv, you can install and run with your Conda Python directly.
+
+Windows (cmd):
+
+```cmd
+cd C:\Users\lewka\deep_learning\OpenHands-main
+"C:\Users\lewka\miniconda3\envs\deep_learning\python.exe" -m pip install --upgrade pip
+"C:\Users\lewka\miniconda3\envs\deep_learning\python.exe" -m pip install -e .
+
+REM Optional: local config
+copy config.template.toml config.toml
+
+REM Run the CLI (no web UI)
+"C:\Users\lewka\miniconda3\envs\deep_learning\python.exe" -m openhands.cli.entry
+```
+
+Notes:
+- The CLI reads `./config.toml` if present; otherwise `%USERPROFILE%\.openhands\config.toml`.
+- To use the Claude Code CLI locally (not in Docker), in `config.toml` set:
+  - `enable_claude_code_cli = true`
+  - `claude_code_path = "C:\\Program Files\\Claude\\claude.exe"`
+
 ### Getting Started
 
 When you open the application, you'll be asked to choose an LLM provider and add an API key.
