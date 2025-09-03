@@ -49,6 +49,10 @@ class Settings(BaseModel):
     email_verified: bool | None = None
     git_user_name: str | None = None
     git_user_email: str | None = None
+    # Claude Code CLI integration (optional, advanced)
+    enable_claude_code_cli: bool | None = None
+    claude_code_path: str | None = None
+    claude_code_max_output_tokens: int | None = None
 
     model_config = ConfigDict(
         validate_assignment=True,

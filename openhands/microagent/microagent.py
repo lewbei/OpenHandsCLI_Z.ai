@@ -72,8 +72,14 @@ class BaseMicroagent(BaseModel):
 
         # Only load directly from path if file_content is not provided
         if file_content is None:
-            with open(path) as f:
-                file_content = f.read()
+            # Force UTF-8 decoding on Windows; fall back to replacement to avoid crashes
+            try:
+                with open(path, 'r', encoding='utf-8') as f:
+                    file_content = f.read()
+            except UnicodeDecodeError:
+                # Last-resort: replace undecodable bytes to keep loading resilient
+                with open(path, 'r', encoding='utf-8', errors='replace') as f:
+                    file_content = f.read()
 
         # Legacy repo instructions are stored in .openhands_instructions
         if path.name == '.openhands_instructions':

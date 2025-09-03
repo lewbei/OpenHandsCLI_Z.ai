@@ -92,6 +92,16 @@ class LLMConfig(BaseModel):
         default=None,
         description='Safety settings for models that support them (like Mistral AI and Gemini)',
     )
+    # Claude Code CLI integration (optional)
+    # When enabled, OpenHands will call the local Claude Code CLI instead of LiteLLM.
+    enable_claude_code_cli: bool = Field(default=False)
+    claude_code_path: str | None = Field(
+        default=None, description="Path to 'claude' CLI. Defaults to 'claude' if not set."
+    )
+    claude_code_max_output_tokens: int | None = Field(
+        default=None,
+        description='Overrides max output tokens for Claude Code CLI. If not set, uses max_output_tokens or CLI default.',
+    )
 
     model_config = ConfigDict(extra='forbid')
 

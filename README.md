@@ -137,7 +137,27 @@ check out our [documentation](https://docs.all-hands.dev/usage/getting-started).
 There you'll find resources on how to use different LLM providers,
 troubleshooting resources, and advanced configuration options.
 
-## 🤝 How to Join the Community
+## � Optional: Use local Claude Code CLI
+
+If you have the Claude desktop app/CLI installed, OpenHands can route code completions through the local `claude` CLI instead of an API provider. This can reduce latency and avoid sending code to external services.
+
+Enable it in `config.toml`:
+
+```toml
+[llm]
+enable_claude_code_cli = true
+# Windows example path (adjust as needed):
+claude_code_path = "C:\\Program Files\\Claude\\claude.exe"
+# Optional output token override
+claude_code_max_output_tokens = 8192
+```
+
+Notes:
+- Image inputs aren’t supported by the CLI route; they’ll be replaced with a placeholder text.
+- If the `claude` binary isn’t found or fails, OpenHands falls back to the API provider automatically.
+- See `openhands/core/config/README.md` for details and environment variable equivalents.
+
+## �🤝 How to Join the Community
 
 OpenHands is a community-driven project, and we welcome contributions from everyone. We do most of our communication
 through Slack, so this is the best place to start, but we also are happy to have you contact us on Discord or Github:

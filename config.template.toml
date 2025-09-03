@@ -107,10 +107,10 @@
 # AWS secret access key
 #aws_secret_access_key = ""
 
-# API key to use (For Headless / CLI only -  In Web this is overridden by Session Init)
+# API key to use (For Headless / CLI only - In Web this is overridden by Session Init)
 api_key = ""
 
-# API base URL (For Headless / CLI only -  In Web this is overridden by Session Init)
+# API base URL (For Headless / CLI only - In Web this is overridden by Session Init)
 #base_url = ""
 
 # API version
@@ -126,7 +126,17 @@ api_key = ""
 #output_cost_per_token = 0.0
 
 # Custom LLM provider
+# Set to "anthropic" for Anthropic-compatible gateways (e.g., Z.ai)
 #custom_llm_provider = ""
+
+# Anthropic-compatible gateway example (e.g., Z.ai):
+#   model = "glm-4.5"
+#   base_url = "https://api.z.ai/api/anthropic"
+#   custom_llm_provider = "anthropic"
+# Or via environment variables in Git Bash:
+#   export ANTHROPIC_BASE_URL=https://api.z.ai/api/anthropic
+#   export ANTHROPIC_AUTH_TOKEN=YOUR_API_KEY
+#   export ANTHROPIC_API_KEY=YOUR_API_KEY
 
 # Maximum number of characters in an observation's content
 #max_message_chars = 10000
@@ -166,6 +176,14 @@ model = "gpt-4o"
 
 # Using the prompt caching feature if provided by the LLM and supported
 #caching_prompt = true
+
+# Claude Code CLI integration (optional)
+# When enabled, OpenHands will call the local Claude Code CLI instead of LiteLLM.
+#enable_claude_code_cli = false
+# Path to 'claude' CLI. Defaults to 'claude' on PATH if not set.
+#claude_code_path = "C:\\Path\\To\\claude.exe"
+# Overrides max output tokens for Claude Code CLI. If not set, uses max_output_tokens or CLI default.
+#claude_code_max_output_tokens = 8192
 
 # Base URL for the OLLAMA API
 #ollama_base_url = ""
@@ -210,6 +228,31 @@ model = "gpt-4o"
 #   { "category" = "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold" = "BLOCK_NONE" }
 # ]
 #safety_settings = []
+
+# --- QUICK START: Anthropic-compatible gateway (e.g., Z.ai) ---
+#
+# Use this example if you want to connect to an Anthropic-compatible endpoint.
+# REQUIRED — set these values:
+#   - model: use the model name accepted by the gateway (e.g., "glm-4.5")
+#   - base_url: the Anthropic-compatible API base URL
+#   - custom_llm_provider: must be "anthropic"
+#   - api_key: provide your key here OR set the environment variables below
+#
+[llm.anthropic_zuai]
+model = "glm-4.5"                               # REQUIRED
+base_url = "https://api.z.ai/api/anthropic"     # REQUIRED
+custom_llm_provider = "anthropic"               # REQUIRED
+api_key = ""                                    # REQUIRED unless using env vars below
+
+# Instead of setting api_key above, you can set environment variables (Git Bash):
+#   export ANTHROPIC_BASE_URL=https://api.z.ai/api/anthropic
+#   export ANTHROPIC_AUTH_TOKEN=YOUR_API_KEY
+#   export ANTHROPIC_API_KEY=YOUR_API_KEY
+#
+# Optional — Claude Code CLI (only if you have claude.exe installed):
+#enable_claude_code_cli = false
+#claude_code_path = "C:\\Path\\To\\claude.exe"
+#claude_code_max_output_tokens = 8192
 
 [llm.draft_editor]
 # The number of times llm_editor tries to fix an error when editing.

@@ -1,0 +1,26 @@
+services:
+  openhands:
+    build:
+      context: ./
+      dockerfile: ./containers/app/Dockerfile
+    image: openhands:latest
+    container_name: openhands-app
+    environment:
+      - SANDBOX_RUNTIME_CONTAINER_IMAGE=${SANDBOX_RUNTIME_CONTAINER_IMAGE:-docker.all-hands.dev/all-hands-ai/runtime:0.55-nikolaik}
+      - WORKSPACE_MOUNT_PATH=${WORKSPACE_BASE}
+    ports:
+      - "3000:3000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      # Use Docker Desktop socket exposed to WSL
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Persist state in your WSL home
+      - ${HOME}/.openhands:/.openhands
+      # Mount workspace from current repo (defaults to ./workspace under this folder)
+      - ${WORKSPACE_BASE:-./workspace}:/opt/workspace_base
+      # Optional: bind a local config.toml (remove if not present)
+      - ./config.toml:/app/config.toml:ro
+    pull_policy: build
+    stdin_open: true
+    tty: true
