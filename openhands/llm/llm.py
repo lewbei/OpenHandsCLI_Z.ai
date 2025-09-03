@@ -172,6 +172,16 @@ class LLM(RetryMixin, DebugMixin):
         elif 'gemini' in self.config.model.lower() and self.config.safety_settings:
             kwargs['safety_settings'] = self.config.safety_settings
 
+        # If using Anthropic models with a custom base_url (e.g., Z.ai), set env for compatibility
+        if self.config.base_url and self.config.model.startswith('anthropic'):
+            os.environ.setdefault('ANTHROPIC_BASE_URL', self.config.base_url)
+            # Some LiteLLM Anthropic paths prefer env vars even if api_key param is supplied
+            if self.config.api_key:
+                _key = self.config.api_key.get_secret_value()
+                if _key:
+                    os.environ.setdefault('ANTHROPIC_API_KEY', _key)
+                    os.environ.setdefault('ANTHROPIC_AUTH_TOKEN', _key)
+
         # support AWS Bedrock provider
         kwargs['aws_region_name'] = self.config.aws_region_name
         if self.config.aws_access_key_id:

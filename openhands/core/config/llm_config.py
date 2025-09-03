@@ -191,6 +191,24 @@ class LLMConfig(BaseModel):
         if self.model.startswith('azure') and self.api_version is None:
             self.api_version = '2024-12-01-preview'
 
+        # Anthropic-compatible gateways (e.g., Z.ai): ensure env + default version
+        is_anthropic_like = self.model.startswith('anthropic') or (
+            (self.base_url or '').endswith('/anthropic') or 'anthropic' in (self.base_url or '')
+        )
+        if is_anthropic_like:
+            # Default API version if not set
+            if self.api_version is None:
+                # Common stable Anthropic version header used by gateways
+                self.api_version = '2023-06-01'
+            # Propagate env vars for providers that read from environment
+            if self.base_url:
+                os.environ.setdefault('ANTHROPIC_BASE_URL', self.base_url)
+            if self.api_key:
+                _key = self.api_key.get_secret_value()
+                if _key:
+                    os.environ.setdefault('ANTHROPIC_API_KEY', _key)
+                    os.environ.setdefault('ANTHROPIC_AUTH_TOKEN', _key)
+
         # Set AWS credentials as environment variables for LiteLLM Bedrock
         if self.aws_access_key_id:
             os.environ['AWS_ACCESS_KEY_ID'] = self.aws_access_key_id.get_secret_value()

@@ -1,11 +1,18 @@
+import asyncio
+import uuid
+from typing import AsyncIterator
+
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse
+from sse_starlette.sse import EventSourceResponse
 from pydantic import BaseModel
 
 from openhands.core.logger import openhands_logger as logger
+from openhands.events.async_event_store_wrapper import AsyncEventStoreWrapper
 from openhands.events.event_filter import EventFilter
 from openhands.events.event_store import EventStore
 from openhands.events.serialization.event import event_to_dict
+from openhands.events.stream import EventStreamSubscriber
 from openhands.memory.memory import Memory
 from openhands.microagent.types import InputMetadata
 from openhands.runtime.base import Runtime
@@ -175,6 +182,106 @@ async def add_event(
     data = await request.json()
     await conversation_manager.send_event_to_conversation(conversation.sid, data)
     return JSONResponse({'success': True})
+
+
+@app.get('/events/stream')
+async def stream_events(
+    request: Request,
+    start_id: int = 0,
+    exclude_hidden: bool = True,
+    conversation: ServerConversation = Depends(get_conversation),
+):
+    """Stream conversation events via Server-Sent Events (SSE).
+
+    Replays events from start_id, then streams new events as they arrive.
+    Each item is sent as event: oh_event with JSON data.
+    """
+
+    async def event_generator() -> AsyncIterator[dict]:
+        # Initial replay
+        try:
+            async_store = AsyncEventStoreWrapper(
+                conversation.event_stream,
+                start_id=start_id,
+                filter=EventFilter(exclude_hidden=exclude_hidden),
+            )
+        except Exception as e:
+            logger.error(f'Error initializing async event store: {e}')
+            yield {"event": "error", "data": {"message": "Failed to initialize stream"}}
+            return
+
+        last_id = start_id - 1
+
+        async for ev in async_store:
+            data = event_to_dict(ev)
+            if isinstance(data, dict) and 'id' in data:
+                try:
+                    last_id = max(last_id, int(data['id']))
+                except Exception:
+                    pass
+            yield {"event": "oh_event", "data": data}
+
+        # Live updates
+        queue: asyncio.Queue[dict] = asyncio.Queue()
+        loop = asyncio.get_running_loop()
+        callback_id = f'sse:{uuid.uuid4().hex}'
+
+        def _callback(ev):
+            try:
+                # Filter hidden events using the event attribute
+                if exclude_hidden and getattr(ev, 'hidden', False):
+                    return
+                data = event_to_dict(ev)
+                ev_id = data.get('id')
+                try:
+                    if ev_id is not None and int(ev_id) <= last_id:
+                        return
+                except Exception:
+                    pass
+
+                def _put():
+                    try:
+                        queue.put_nowait({"event": "oh_event", "data": data})
+                    except Exception:
+                        pass
+
+                loop.call_soon_threadsafe(_put)
+            except Exception as e:
+                logger.error(f'Error in SSE callback: {e}')
+
+        # Subscribe to live events
+        conversation.event_stream.subscribe(
+            EventStreamSubscriber.SERVER, _callback, callback_id
+        )
+
+        try:
+            while True:
+                if await request.is_disconnected():
+                    break
+                try:
+                    item = await asyncio.wait_for(queue.get(), timeout=1.0)
+                    # Update last_id to avoid duplicates
+                    data = item.get('data', {})
+                    if isinstance(data, dict) and 'id' in data:
+                        try:
+                            ev_id_int = int(data['id'])
+                            if ev_id_int > last_id:
+                                last_id = ev_id_int
+                        except Exception:
+                            pass
+                    yield item
+                except asyncio.TimeoutError:
+                    # Heartbeat
+                    yield {"event": "heartbeat", "data": "ping"}
+        finally:
+            try:
+                conversation.event_stream.unsubscribe(
+                    EventStreamSubscriber.SERVER, callback_id
+                )
+            except Exception:
+                pass
+
+    return EventSourceResponse(event_generator())
 
 
 class MicroagentResponse(BaseModel):

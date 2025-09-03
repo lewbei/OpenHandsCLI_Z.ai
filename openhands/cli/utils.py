@@ -147,7 +147,7 @@ def organize_models_and_providers(
     return result_dict
 
 
-VERIFIED_PROVIDERS = ['openhands', 'anthropic', 'openai', 'mistral']
+VERIFIED_PROVIDERS = ['openhands', 'anthropic', 'openai', 'mistral', 'Z.ai']
 
 VERIFIED_OPENAI_MODELS = [
     'gpt-5-2025-08-07',

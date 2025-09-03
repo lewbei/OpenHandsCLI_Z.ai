@@ -102,23 +102,26 @@ docker run -it --rm --pull=always \
 
 ### Option 3: Windows Native CLI (no virtualenv)
 
-If you’re running this fork in CLI-only mode on Windows and don’t want a venv, you can install and run with your Conda Python directly.
+If you’re running this fork in CLI-only mode on Windows and don’t want a venv, install and run with your existing Python (Conda or system).
 
 Windows (cmd):
 
 ```cmd
-cd C:\Users\lewka\deep_learning\OpenHands-main
-"C:\Users\lewka\miniconda3\envs\deep_learning\python.exe" -m pip install --upgrade pip
-"C:\Users\lewka\miniconda3\envs\deep_learning\python.exe" -m pip install -e .
+cd <path-to-your-cloned-repo>
 
-REM Optional: local config
+:: Use your Python interpreter (e.g., python, py -3.12, or a full path)
+python -m pip install --upgrade pip
+python -m pip install -e .
+
+:: Optional: local config
 copy config.template.toml config.toml
 
-REM Run the CLI (no web UI)
-"C:\Users\lewka\miniconda3\envs\deep_learning\python.exe" -m openhands.cli.entry
+:: Run the CLI (no web UI)
+python -m openhands.cli.entry
 ```
 
 Notes:
+- Replace `python` with your interpreter if needed (for example, `py -3.12` or a full path).
 - The CLI reads `./config.toml` if present; otherwise `%USERPROFILE%\.openhands\config.toml`.
 - To use the Claude Code CLI locally (not in Docker), in `config.toml` set:
   - `enable_claude_code_cli = true`
@@ -161,7 +164,7 @@ check out our [documentation](https://docs.all-hands.dev/usage/getting-started).
 There you'll find resources on how to use different LLM providers,
 troubleshooting resources, and advanced configuration options.
 
-## � Optional: Use local Claude Code CLI
+## 🧰 Optional: Use local Claude Code CLI
 
 If you have the Claude desktop app/CLI installed, OpenHands can route code completions through the local `claude` CLI instead of an API provider. This can reduce latency and avoid sending code to external services.
 
@@ -181,7 +184,7 @@ Notes:
 - If the `claude` binary isn’t found or fails, OpenHands falls back to the API provider automatically.
 - See `openhands/core/config/README.md` for details and environment variable equivalents.
 
-## �🤝 How to Join the Community
+## 🤝 How to Join the Community
 
 OpenHands is a community-driven project, and we welcome contributions from everyone. We do most of our communication
 through Slack, so this is the best place to start, but we also are happy to have you contact us on Discord or Github:

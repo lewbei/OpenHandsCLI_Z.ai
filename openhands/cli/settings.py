@@ -255,21 +255,29 @@ async def modify_llm_settings_basic(
     api_key = None
 
     try:
+        # Detect first-time setup (no settings saved yet)
+        existing_settings = await settings_store.load()
+        is_first_time_setup = existing_settings is None
         # Show the default provider but allow changing it
         print_formatted_text(
             HTML(f'\n<grey>Default provider: </grey><green>{default_provider}</green>')
         )
 
-        # Show verified providers plus "Select another provider" option
-        provider_choices = verified_providers + ['Select another provider']
+        # Show verified providers plus Z.ai and "Select another provider" option
+        # Z.ai is an Anthropic-compatible gateway; we surface it explicitly here.
+        provider_choices = verified_providers + ['Z.ai', 'Select another provider']
+
+        # Compute initial selection; for first-time setup, default to Z.ai
+        default_initial = _get_initial_provider_index(
+            verified_providers, current_provider, default_provider, provider_choices
+        )
+        zai_index = len(verified_providers)  # position of 'Z.ai'
 
         provider_choice = cli_confirm(
             config,
             '(Step 1/3) Select LLM Provider:',
             provider_choices,
-            initial_selection=_get_initial_provider_index(
-                verified_providers, current_provider, default_provider, provider_choices
-            ),
+            initial_selection=(zai_index if is_first_time_setup else default_initial),
         )
 
         # Ensure provider_choice is an integer (for test compatibility)
@@ -282,6 +290,9 @@ async def modify_llm_settings_basic(
         if choice_index < len(verified_providers):
             # User selected one of the verified providers
             provider = verified_providers[choice_index]
+        elif choice_index == len(verified_providers):
+            # User selected Z.ai
+            provider = 'z.ai'
         else:
             # User selected "Select another provider" - use manual selection
             provider = await get_validated_input(
@@ -303,8 +314,9 @@ async def modify_llm_settings_basic(
             current_model = ''
             current_api_key = ''
 
-        # Make sure the provider exists in organized_models
-        if provider not in organized_models:
+        # Make sure the provider exists in organized_models (except for special-case providers)
+        is_zai = provider == 'z.ai'
+        if provider not in organized_models and not is_zai:
             # If the provider doesn't exist, prefer 'anthropic' if available,
             # otherwise use the first provider
             provider = (
@@ -313,13 +325,26 @@ async def modify_llm_settings_basic(
                 else next(iter(organized_models.keys()))
             )
 
-        provider_models = organized_models[provider]['models']
+        # Determine model list for the chosen provider
+        if is_zai:
+            # Map Z.ai to Anthropic's model list and prefer glm-4.5
+            if 'anthropic' in organized_models:
+                provider_models = organized_models['anthropic']['models']
+            else:
+                provider_models = VERIFIED_ANTHROPIC_MODELS[:]
+            # Ensure glm-4.5 is available and first
+            zai_preferred = 'glm-4.5'
+            # Deduplicate while keeping order
+            seen = set()
+            provider_models = [m for m in [zai_preferred] + provider_models if not (m in seen or seen.add(m))]
+        else:
+            provider_models = organized_models[provider]['models']
         if provider == 'openai':
             provider_models = [
                 m for m in provider_models if m not in VERIFIED_OPENAI_MODELS
             ]
             provider_models = VERIFIED_OPENAI_MODELS + provider_models
-        if provider == 'anthropic':
+        if provider == 'anthropic' or is_zai:
             provider_models = [
                 m for m in provider_models if m not in VERIFIED_ANTHROPIC_MODELS
             ]
@@ -336,7 +361,10 @@ async def modify_llm_settings_basic(
             provider_models = VERIFIED_OPENHANDS_MODELS + provider_models
 
         # Set default model to the best verified model for the provider
-        if provider == 'anthropic' and VERIFIED_ANTHROPIC_MODELS:
+        if is_zai:
+            # Prefer glm-4.5 for Z.ai
+            default_model = 'glm-4.5'
+        elif (provider == 'anthropic' or is_zai) and VERIFIED_ANTHROPIC_MODELS:
             # Use the first model in the VERIFIED_ANTHROPIC_MODELS list as it's the best/newest
             default_model = VERIFIED_ANTHROPIC_MODELS[0]
         elif provider == 'openai' and VERIFIED_OPENAI_MODELS:
@@ -459,9 +487,16 @@ async def modify_llm_settings_basic(
         return
 
     llm_config = config.get_llm_config()
-    llm_config.model = f'{provider}{organized_models[provider]["separator"]}{model}'
-    llm_config.api_key = SecretStr(api_key)
-    llm_config.base_url = None
+    # For Z.ai, map to Anthropic provider but set base_url to the Z.ai Anthropic-compatible endpoint
+    if provider == 'z.ai':
+        sep = organized_models['anthropic']['separator'] if 'anthropic' in organized_models else '/'
+        llm_config.model = f'anthropic{sep}{model}'
+        llm_config.api_key = SecretStr(api_key)
+        llm_config.base_url = 'https://api.z.ai/api/anthropic'
+    else:
+        llm_config.model = f'{provider}{organized_models[provider]["separator"]}{model}'
+        llm_config.api_key = SecretStr(api_key)
+        llm_config.base_url = None
     config.set_llm_config(llm_config)
 
     config.default_agent = OH_DEFAULT_AGENT
@@ -478,9 +513,15 @@ async def modify_llm_settings_basic(
     if not settings:
         settings = Settings()
 
-    settings.llm_model = f'{provider}{organized_models[provider]["separator"]}{model}'
-    settings.llm_api_key = SecretStr(api_key)
-    settings.llm_base_url = None
+    if provider == 'z.ai':
+        sep = organized_models['anthropic']['separator'] if 'anthropic' in organized_models else '/'
+        settings.llm_model = f'anthropic{sep}{model}'
+        settings.llm_api_key = SecretStr(api_key)
+        settings.llm_base_url = 'https://api.z.ai/api/anthropic'
+    else:
+        settings.llm_model = f'{provider}{organized_models[provider]["separator"]}{model}'
+        settings.llm_api_key = SecretStr(api_key)
+        settings.llm_base_url = None
     settings.agent = OH_DEFAULT_AGENT
     settings.enable_default_condenser = True
 

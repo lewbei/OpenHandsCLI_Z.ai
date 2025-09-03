@@ -4,10 +4,13 @@ PowerShell SDK directly. This aims to provide a more robust and integrated
 way to manage PowerShell processes compared to using temporary script files.
 """
 
+# pyright: reportMissingImports=false, reportMissingModuleSource=false
+
 import os
 import time
 import traceback
 from pathlib import Path
+import re
 from threading import RLock
 
 import pythonnet
@@ -659,6 +662,46 @@ class WindowsPowershellSession:
             )
 
         command = action.command.strip()
+        # Best-effort translation of common Unix-like commands/flags to PowerShell equivalents
+        def _translate_unix_to_powershell(cmd: str) -> str:
+            try:
+                stripped = cmd.strip()
+                # Translate `ls` with Unix flags to Get-ChildItem
+                m = re.match(r"^\s*ls\b(.*)$", stripped)
+                if m:
+                    rest = m.group(1)
+                    tokens = rest.strip().split() if rest else []
+                    flags = [t for t in tokens if t.startswith('-')]
+                    args = [t for t in tokens if not t.startswith('-')]
+                    # Detect -a, -la, -al, or combined flags containing 'a'
+                    has_a = any(f in ('-a', '-la', '-al') or ('a' in f[1:]) for f in flags)
+                    # Detect -l or combined flags containing 'l' (no strict formatting change here)
+                    # has_l = any(f == '-l' or ('l' in f[1:]) for f in flags)
+                    new_cmd = 'Get-ChildItem'
+                    if has_a:
+                        new_cmd += ' -Force'
+                    if args:
+                        new_cmd += ' ' + ' '.join(args)
+                    logger.info(f"Translated Unix-like command '{cmd}' -> '{new_cmd}' for PowerShell compatibility")
+                    return new_cmd
+
+                # Translate `pwd` to Get-Location
+                if re.match(r"^\s*pwd\s*$", stripped):
+                    new_cmd = 'Get-Location'
+                    logger.info(f"Translated Unix-like command '{cmd}' -> '{new_cmd}' for PowerShell compatibility")
+                    return new_cmd
+
+                # Translate `cat file` to Get-Content file
+                if re.match(r"^\s*cat\b", stripped):
+                    new_cmd = re.sub(r"^\s*cat\b", 'Get-Content', stripped)
+                    logger.info(f"Translated Unix-like command '{cmd}' -> '{new_cmd}' for PowerShell compatibility")
+                    return new_cmd
+            except Exception as _:
+                # Best-effort only; on failure, just return original
+                pass
+            return cmd
+
+        command = _translate_unix_to_powershell(command)
         timeout_seconds = action.timeout or 60  # Default to 60 seconds hard timeout
         is_input = action.is_input  # Check if it's intended as input
 
